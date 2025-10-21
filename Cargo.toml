@@ -1,0 +1,20 @@
+[package]
+name = "solana-tx-parser"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = ["full", "parsing", "extra-traits"] }
+grpc-client = { git = "https://github.com/miaomiaowu0428/grpc-client.git" }
+borsh = { version = "1.5", features = ["derive"] }
+base64 = "0.22"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+log = "0.4.28"
+solana-sdk = "3.0.0"
