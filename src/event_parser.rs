@@ -256,7 +256,7 @@ pub fn parse_event(input: TokenStream) -> TokenStream {
             }
 
             fn check_cpi_log(
-                instruction: &solana_sdk::instruction::CompiledInstruction,
+                instruction: &solana_sdk::message::compiled_instruction::CompiledInstruction,
                 tx_signature: &str,
             ) -> Option<Self> {
                 // Anchor self CPI log 的标识符 (前8字节)

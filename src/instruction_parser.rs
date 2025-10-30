@@ -414,7 +414,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             }
 
             fn check_instruction(
-                instruction: &solana_sdk::instruction::CompiledInstruction,
+                instruction: &solana_sdk::message::compiled_instruction::CompiledInstruction,
                 accounts: &[solana_sdk::pubkey::Pubkey],
             ) -> Option<Self> {
                 // 检查 discriminator
