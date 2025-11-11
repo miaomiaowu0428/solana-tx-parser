@@ -230,8 +230,7 @@ pub fn parse_event(input: TokenStream) -> TokenStream {
                         Some(event)
                     },
                     Err(e) => {
-                        log::info!("{} 从完整数据解析失败: {:?}", stringify!(#name), e);
-                        log::info!("事件数据 hex: {:02x?}", event_data);
+                        log::info!("{} 数据解析失败: {:?}", stringify!(#name), e);
                         None
                     }
                 }
