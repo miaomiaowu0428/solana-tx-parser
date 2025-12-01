@@ -477,7 +477,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             }
             
             /// 新功能：从 IndexedInstruction 解析指令 (针对 utils::IndexedInstruction)
-            fn from_indexed_instruction(indexed_instruction: utils::IndexedInstruction) -> Option<Self, > {
+            fn from_indexed_instruction(indexed_instruction: &utils::IndexedInstruction) -> Option<Self, > {
                 // accounts 是 ParsedInstruction.accounts 的引用
                 let accounts = &indexed_instruction.instruction.accounts;
                 // instruction 是 ParsedInstruction 的引用
