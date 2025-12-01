@@ -390,7 +390,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             }
 
             /// 从交易中解析所有匹配的指令 (保持不变)
-            pub fn from(tx: &grpc_client::TransactionFormat) -> Vec<Self> {
+            pub fn from_grpc_format(tx: &grpc_client::TransactionFormat) -> Vec<Self> {
                 let mut results = Vec::new();
                 let accounts = &tx.account_keys;
 
