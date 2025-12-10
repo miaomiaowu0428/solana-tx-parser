@@ -382,7 +382,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
         pub struct #name {
             #(#account_fields)*
             #(#data_field_tokens)*
-            pub remain_accounts: Vec<Pubkey>,
+            pub remain_accounts: Vec<solana_sdk::pubkey::Pubkey>,
             /// 指令发生的 slot 号（自动添加）
             pub slot: u64,
         }
