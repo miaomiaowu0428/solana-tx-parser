@@ -361,7 +361,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             // 没有数据字段，只返回默认账户
             Some(Self {
                 #(#default_account_parsing)*
-                #indexed_remain_accounts
+                remain_accounts: vec![],
                 slot: slot,
             })
         }
