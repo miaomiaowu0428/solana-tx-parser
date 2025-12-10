@@ -394,7 +394,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             }
 
             /// 新增：返回指令定义的账户字段总数（需要的账户长度）
-            pub fn account_count() -> usize {
+            pub fn account_len() -> usize {
                 #account_count
             }
 
