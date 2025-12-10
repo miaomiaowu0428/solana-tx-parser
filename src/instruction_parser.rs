@@ -199,28 +199,30 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
     });
 
     // === 新增/修改: 针对 CompiledInstruction 的账户解析 (旧功能) ===
-    let compiled_account_parsing = instruction_def
-        .accounts
-        .iter()
-        .enumerate()
-        .map(|(i, account)| {
-            let field_name = &account.name;
-            quote! {
-                #field_name: accounts[instruction.accounts[#i] as usize],
-            }
-        });
+    let compiled_account_parsing =
+        instruction_def
+            .accounts
+            .iter()
+            .enumerate()
+            .map(|(i, account)| {
+                let field_name = &account.name;
+                quote! {
+                    #field_name: accounts[instruction.accounts[#i] as usize],
+                }
+            });
 
     // === 新增: 针对 IndexedInstruction 的账户解析 (新功能) ===
-    let indexed_account_parsing = instruction_def
-        .accounts
-        .iter()
-        .enumerate()
-        .map(|(i, account)| {
-            let field_name = &account.name;
-            quote! {
-                #field_name: accounts[#i],
-            }
-        });
+    let indexed_account_parsing =
+        instruction_def
+            .accounts
+            .iter()
+            .enumerate()
+            .map(|(i, account)| {
+                let field_name = &account.name;
+                quote! {
+                    #field_name: accounts[#i],
+                }
+            });
 
     let account_count = instruction_def.accounts.len();
     let has_data_fields = !instruction_def.data_fields.is_empty();
@@ -260,7 +262,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             let field_name = &field.name;
             quote! { #field_name: parsed_data.#field_name, }
         });
-        
+
         quote! {
             let data_bytes = &instruction.data[DISCRIMINATOR.len()..];
             let parsed_data = match borsh1::try_from_slice_unchecked::<#data_struct_name>(data_bytes) {
@@ -270,6 +272,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             Some(Self {
                 #(#compiled_account_parsing)*
                 #(#data_parsing)*
+                remain_accounts: Vec::new(),
                 slot: 0, // slot 在 from 函数中设置
             })
         }
@@ -277,6 +280,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
         quote! {
             Some(Self {
                 #(#compiled_account_parsing)*
+                remain_accounts: Vec::new(),
                 slot: 0, // slot 在 from 函数中设置
             })
         }
@@ -304,6 +308,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             Some(Self {
                 #(#indexed_account_parsing)* // <--- 使用新解析
                 #(#data_parsing)*
+                remain_accounts: Vec::new(),
                 slot: indexed_instruction.slot, // <--- 使用 indexed_instruction.slot
             })
         }
@@ -311,6 +316,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
         quote! {
             Some(Self {
                 #(#indexed_account_parsing)* // <--- 使用新解析
+                remain_accounts: Vec::new(),
                 slot: indexed_instruction.slot, // <--- 使用 indexed_instruction.slot
             })
         }
@@ -342,6 +348,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
                 // 账户字段使用默认值（空的 Pubkey）
                 #(#default_account_parsing)*
                 #(#data_parsing)*
+                remain_accounts: Vec::new(),
                 slot: slot,
             })
         }
@@ -350,6 +357,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             // 没有数据字段，只返回默认账户
             Some(Self {
                 #(#default_account_parsing)*
+                remain_accounts: Vec::new(),
                 slot: slot,
             })
         }
@@ -374,6 +382,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
         pub struct #name {
             #(#account_fields)*
             #(#data_field_tokens)*
+            pub remain_accounts: Vec<Pubkey>,
             /// 指令发生的 slot 号（自动添加）
             pub slot: u64,
         }
@@ -382,6 +391,11 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             /// 返回指令的 discriminator (保持不变)
             pub fn discriminator() -> &'static [u8] {
                 &[#(#discriminator),*]
+            }
+
+            /// 新增：返回指令定义的账户字段总数（需要的账户长度）
+            pub fn account_count() -> usize {
+                #account_count
             }
 
             /// 返回绑定的事件类型名称（如果有的话）(保持不变)
@@ -475,7 +489,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
 
                 #compiled_instruction_parsing
             }
-            
+
             /// 新功能：从 IndexedInstruction 解析指令 (针对 utils::IndexedInstruction)
             pub fn from_indexed_instruction(indexed_instruction: &utils::IndexedInstruction) -> Option<Self, > {
                 // accounts 是 ParsedInstruction.accounts 的引用
@@ -503,7 +517,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
                 if instruction.accounts.len() < #account_count {
                     return None;
                 }
-                
+
                 #indexed_instruction_parsing
             }
         }
