@@ -255,6 +255,10 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
         }
     });
 
+    let indexed_remain_accounts = quote! {
+        remain_accounts: accounts[#account_count..].to_vec(),
+    };
+
     // === 修改: 针对 CompiledInstruction 的指令解析 (旧功能) ===
     let compiled_instruction_parsing = if has_data_fields {
         let data_struct_name = quote::format_ident!("{}Data", name);
@@ -272,7 +276,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             Some(Self {
                 #(#compiled_account_parsing)*
                 #(#data_parsing)*
-                remain_accounts: Vec::new(),
+                #indexed_remain_accounts
                 slot: 0, // slot 在 from 函数中设置
             })
         }
@@ -280,7 +284,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
         quote! {
             Some(Self {
                 #(#compiled_account_parsing)*
-                remain_accounts: Vec::new(),
+                #indexed_remain_accounts
                 slot: 0, // slot 在 from 函数中设置
             })
         }
@@ -308,7 +312,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             Some(Self {
                 #(#indexed_account_parsing)* // <--- 使用新解析
                 #(#data_parsing)*
-                remain_accounts: Vec::new(),
+                #indexed_remain_accounts
                 slot: indexed_instruction.slot, // <--- 使用 indexed_instruction.slot
             })
         }
@@ -316,7 +320,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
         quote! {
             Some(Self {
                 #(#indexed_account_parsing)* // <--- 使用新解析
-                remain_accounts: Vec::new(),
+                #indexed_remain_accounts
                 slot: indexed_instruction.slot, // <--- 使用 indexed_instruction.slot
             })
         }
@@ -348,7 +352,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
                 // 账户字段使用默认值（空的 Pubkey）
                 #(#default_account_parsing)*
                 #(#data_parsing)*
-                remain_accounts: Vec::new(),
+                remain_accounts: vec![],
                 slot: slot,
             })
         }
@@ -357,7 +361,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             // 没有数据字段，只返回默认账户
             Some(Self {
                 #(#default_account_parsing)*
-                remain_accounts: Vec::new(),
+                #indexed_remain_accounts
                 slot: slot,
             })
         }
