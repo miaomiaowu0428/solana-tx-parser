@@ -493,6 +493,9 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
 
                 #compiled_instruction_parsing
             }
+            fn program()->solana_sdk::pubkey::Pubkey{
+                solana_sdk::pubkey!(#program_id_str)
+            }
 
             /// 新功能：从 IndexedInstruction 解析指令 (针对 utils::IndexedInstruction)
             pub fn from_indexed_instruction(indexed_instruction: &utils::IndexedInstruction) -> Option<Self, > {
