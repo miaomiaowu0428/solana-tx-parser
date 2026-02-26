@@ -227,6 +227,11 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
     let account_count = instruction_def.accounts.len();
     let has_data_fields = !instruction_def.data_fields.is_empty();
 
+    // 生成 remain_accounts 引用
+    let indexed_remain_accounts = quote! {
+        remain_accounts: accounts[#account_count..].to_vec(),
+    };
+
     // 如果有数据字段，生成一个单独的数据结构体
     let data_struct = if has_data_fields {
         let data_struct_name = quote::format_ident!("{}Data", name);
@@ -255,10 +260,6 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
         }
     });
 
-    let indexed_remain_accounts = quote! {
-        remain_accounts: accounts[#account_count..].to_vec(),
-    };
-
     // === 修改: 针对 CompiledInstruction 的指令解析 (旧功能) ===
     let compiled_instruction_parsing = if has_data_fields {
         let data_struct_name = quote::format_ident!("{}Data", name);
@@ -269,22 +270,28 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
 
         quote! {
             let data_bytes = &instruction.data[DISCRIMINATOR.len()..];
-            let parsed_data = match borsh1::try_from_slice_unchecked::<#data_struct_name>(data_bytes) {
+            let mut reader = data_bytes;
+            let parsed_data: #data_struct_name = match borsh::BorshDeserialize::deserialize(&mut reader) {
                 Ok(data) => data,
                 Err(_) => return None,
             };
+            let consumed = data_bytes.len() - reader.len();
+            let remain_data = data_bytes[consumed..].to_vec();
             Some(Self {
                 #(#compiled_account_parsing)*
                 #(#data_parsing)*
-                #indexed_remain_accounts
+                remain_accounts: instruction.accounts[#account_count..].iter().map(|&idx| accounts[idx as usize]).collect::<Vec<solana_sdk::pubkey::Pubkey>>(),
+                remain_data,
                 slot: 0, // slot 在 from 函数中设置
             })
         }
     } else {
         quote! {
+            let data_bytes = &instruction.data[DISCRIMINATOR.len()..];
             Some(Self {
                 #(#compiled_account_parsing)*
-                #indexed_remain_accounts
+                remain_accounts: instruction.accounts[#account_count..].iter().map(|&idx| accounts[idx as usize]).collect::<Vec<solana_sdk::pubkey::Pubkey>>(),
+                remain_data: data_bytes.to_vec(),
                 slot: 0, // slot 在 from 函数中设置
             })
         }
@@ -301,26 +308,32 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
         quote! {
             // 跳过 discriminator，解析剩余的数据
             let data_bytes = &instruction.data[DISCRIMINATOR.len()..];
-            let parsed_data = match borsh1::try_from_slice_unchecked::<#data_struct_name>(data_bytes) {
+            let mut reader = data_bytes;
+            let parsed_data: #data_struct_name = match borsh::BorshDeserialize::deserialize(&mut reader) {
                 Ok(data) => data,
                 Err(e) => {
                     log::info!("指令数据Borsh反序列化失败: {:?}", e);
                     return None;
                 }
             };
+            let consumed = data_bytes.len() - reader.len();
+            let remain_data = data_bytes[consumed..].to_vec();
 
             Some(Self {
                 #(#indexed_account_parsing)* // <--- 使用新解析
                 #(#data_parsing)*
                 #indexed_remain_accounts
+                remain_data,
                 slot: indexed_instruction.slot, // <--- 使用 indexed_instruction.slot
             })
         }
     } else {
         quote! {
+            let data_bytes = &instruction.data[DISCRIMINATOR.len()..];
             Some(Self {
                 #(#indexed_account_parsing)* // <--- 使用新解析
                 #indexed_remain_accounts
+                remain_data: data_bytes.to_vec(),
                 slot: indexed_instruction.slot, // <--- 使用 indexed_instruction.slot
             })
         }
@@ -338,7 +351,8 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
         });
 
         quote! {
-            let parsed_data = match borsh1::try_from_slice_unchecked::<#data_struct_name>(data_bytes) {
+            let mut reader = data_bytes;
+            let parsed_data: #data_struct_name = match borsh::BorshDeserialize::deserialize(&mut reader) {
                 Ok(data) => data,
                 Err(e) => {
                     log::info!("{} 从完整数据解析失败: {:?}", stringify!(#name), e);
@@ -346,6 +360,8 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
                     return None;
                 }
             };
+            let consumed = data_bytes.len() - reader.len();
+            let remain_data = data_bytes[consumed..].to_vec();
 
             // 注意：from_full_data 不包含账户信息，账户字段将使用默认值
             Some(Self {
@@ -353,6 +369,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
                 #(#default_account_parsing)*
                 #(#data_parsing)*
                 remain_accounts: vec![],
+                remain_data,
                 slot: slot,
             })
         }
@@ -362,6 +379,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             Some(Self {
                 #(#default_account_parsing)*
                 remain_accounts: vec![],
+                remain_data: data_bytes.to_vec(),
                 slot: slot,
             })
         }
@@ -387,6 +405,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             #(#account_fields)*
             #(#data_field_tokens)*
             pub remain_accounts: Vec<solana_sdk::pubkey::Pubkey>,
+            pub remain_data: Vec<u8>,
             /// 指令发生的 slot 号（自动添加）
             pub slot: u64,
         }
@@ -493,8 +512,10 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
 
                 #compiled_instruction_parsing
             }
-            fn program()->solana_sdk::pubkey::Pubkey{
-                solana_sdk::pubkey!(#program_id_str)
+            
+            fn program() -> solana_sdk::pubkey::Pubkey {
+                #program_id_str.parse::<solana_sdk::pubkey::Pubkey>()
+                    .expect("Invalid program_id format")
             }
 
             /// 新功能：从 IndexedInstruction 解析指令 (针对 utils::IndexedInstruction)
