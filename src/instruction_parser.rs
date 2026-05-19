@@ -497,11 +497,8 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
                 }
 
                 // 检查程序地址
-                let program_id_str = #program_id_str;
-                let expected_program_id = program_id_str.parse::<solana_sdk::pubkey::Pubkey>()
-                    .expect("Invalid program_id format");
                 let actual_program_id = accounts[instruction.program_id_index as usize];
-                if actual_program_id != expected_program_id {
+                if actual_program_id != Self::program() {
                     return None;
                 }
 
@@ -512,10 +509,13 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
 
                 #compiled_instruction_parsing
             }
-            
+
             fn program() -> solana_sdk::pubkey::Pubkey {
-                #program_id_str.parse::<solana_sdk::pubkey::Pubkey>()
-                    .expect("Invalid program_id format")
+                static PROGRAM_ID: std::sync::OnceLock<solana_sdk::pubkey::Pubkey> = std::sync::OnceLock::new();
+                *PROGRAM_ID.get_or_init(|| {
+                    #program_id_str.parse::<solana_sdk::pubkey::Pubkey>()
+                        .expect("Invalid program_id format")
+                })
             }
 
             /// 新功能：从 IndexedInstruction 解析指令 (针对 utils::IndexedInstruction)
@@ -533,11 +533,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
                 }
 
                 // 检查程序地址
-                let program_id_str = #program_id_str;
-                let expected_program_id = program_id_str.parse::<solana_sdk::pubkey::Pubkey>()
-                    .expect("Invalid program_id format");
-                // 直接使用 instruction.program 字段
-                if instruction.program != expected_program_id {
+                if instruction.program != Self::program() {
                     return None;
                 }
 
