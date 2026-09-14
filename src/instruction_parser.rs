@@ -426,36 +426,6 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
                 #if_bound_event
             }
 
-            /// 从交易中解析所有匹配的指令 (保持不变)
-            pub fn from_grpc_format(tx: &grpc_client::TransactionFormat) -> Vec<Self> {
-                let mut results = Vec::new();
-                let accounts = &tx.account_keys;
-
-                // 检查主指令
-                for instruction in tx.transation.message.instructions() {
-                    if let Some(mut parsed) = Self::parse_instruction(instruction, accounts) {
-                        parsed.slot = tx.slot;
-                        results.push(parsed);
-                    }
-                }
-
-                // 检查内部指令
-                if let Some(ref meta) = tx.meta {
-                    if let Some(ref inner_instructions) = meta.inner_instructions {
-                        for inner_ix_group in inner_instructions {
-                            for inner_instruction in &inner_ix_group.instructions {
-                                if let Some(mut parsed) = Self::parse_instruction(&inner_instruction.instruction, accounts) {
-                                    parsed.slot = tx.slot;
-                                    results.push(parsed);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                results
-            }
-
             /// 从完整数据解析指令（包含discriminator）(保持不变)
             pub fn from_full_data(data: &[u8]) -> Option<Self> {
                 Self::from_full_data_with_slot(data, 0)
