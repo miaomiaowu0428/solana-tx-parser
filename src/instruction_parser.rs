@@ -312,7 +312,7 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             let parsed_data: #data_struct_name = match borsh::BorshDeserialize::deserialize(&mut reader) {
                 Ok(data) => data,
                 Err(e) => {
-                    log::info!("指令数据Borsh反序列化失败: {:?}", e);
+                    log::debug!("指令数据Borsh反序列化失败: {:?}", e);
                     return None;
                 }
             };
@@ -355,8 +355,8 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
             let parsed_data: #data_struct_name = match borsh::BorshDeserialize::deserialize(&mut reader) {
                 Ok(data) => data,
                 Err(e) => {
-                    log::info!("{} 从完整数据解析失败: {:?}", stringify!(#name), e);
-                    log::info!("数据 hex: {:02x?}", data_bytes);
+                    log::debug!("{} 从完整数据解析失败: {:?}", stringify!(#name), e);
+                    log::debug!("数据 hex: {:02x?}", data_bytes);
                     return None;
                 }
             };
@@ -436,19 +436,19 @@ pub fn parse_instruction(input: TokenStream) -> TokenStream {
                 const DISCRIMINATOR: &[u8] = &[#(#discriminator),*];
 
                 if data.len() < DISCRIMINATOR.len() {
-                    log::info!("{} 数据长度不足以包含 discriminator: {}", stringify!(#name), data.len());
+                    log::debug!("{} 数据长度不足以包含 discriminator: {}", stringify!(#name), data.len());
                     return None;
                 }
 
                 // 检查 discriminator
                 if &data[0..DISCRIMINATOR.len()] != DISCRIMINATOR {
-                    log::info!("{} discriminator 不匹配", stringify!(#name));
+                    log::debug!("{} discriminator 不匹配", stringify!(#name));
                     return None;
                 }
 
                 // 跳过 discriminator，解析剩余的数据
                 let data_bytes = &data[DISCRIMINATOR.len()..];
-                log::info!("{} 解析指令数据，长度: {}", stringify!(#name), data_bytes.len());
+                log::debug!("{} 解析指令数据，长度: {}", stringify!(#name), data_bytes.len());
 
                 // 解析数据字段（如果有的话）
                 #instruction_parsing_for_full_data_with_slot
